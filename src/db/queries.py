@@ -57,3 +57,8 @@ async def get_prizes(session: AsyncSession) -> list[Prize]:
     stmt = select(Prize)
     result = await session.execute(stmt)
     return result.scalars().all()
+
+async def get_referrals(session: AsyncSession, user_id: int) -> list[User]:
+    stmt = select(User).where(User.referred_by == user_id)
+    result = await session.execute(stmt)
+    return result.scalars().all()

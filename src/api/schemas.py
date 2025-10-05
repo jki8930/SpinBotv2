@@ -22,3 +22,9 @@ class Prize(PrizeBase):
 
     class Config:
         from_attributes = True
+
+class Referral(UserBase):
+    id: int
+
+    class Config:
+        from_attributes = True
