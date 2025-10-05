@@ -1,8 +1,9 @@
 import asyncio
 import logging
 import os
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import CommandStart
+from src.bot.keyboards import get_main_menu_keyboard
 
 def create_bot():
     bot = Bot(token=os.getenv("BOT_TOKEN"))
@@ -13,7 +14,15 @@ def create_dispatcher():
 
     @dp.message(CommandStart())
     async def start_command(message: types.Message):
-        await message.answer("Привет! Добро пожаловать в TRGSpin!")
+        await message.answer("Привет! Добро пожаловать в TRGSpin!", reply_markup=get_main_menu_keyboard())
+
+    @dp.callback_query(F.data == "referral_system")
+    async def referral_system_callback(callback_query: types.CallbackQuery):
+        await callback_query.answer("Вы выбрали реферальную систему.", show_alert=True)
+
+    @dp.callback_query(F.data == "leaderboard")
+    async def leaderboard_callback(callback_query: types.CallbackQuery):
+        await callback_query.answer("Вы выбрали таблицу лидеров.", show_alert=True)
 
     @dp.errors()
     async def error_handler(update: types.Update, exception: Exception):
