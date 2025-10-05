@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, List
 from fastapi import Depends, APIRouter, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.api import schemas
@@ -12,6 +12,11 @@ async def get_db() -> AsyncSession:
         yield session
 
 DBSession = Annotated[AsyncSession, Depends(get_db)]
+
+@router.get("/users/top", response_model=List[schemas.User])
+async def get_top_users(db: DBSession):
+    users = await queries.get_top_users(db)
+    return users
 
 @router.get("/users/{telegram_id}", response_model=schemas.User)
 async def get_user(telegram_id: int, db: DBSession):

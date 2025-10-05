@@ -22,8 +22,18 @@
             </div>
         </div>
         <div id="leaderboard" class="hidden py-4">
-            <h2 class="text-2xl font-bold">Топ игроков</h2>
-            <!-- Leaderboard component will go here -->
+            <h2 class="text-2xl font-bold mb-4">Топ игроков</h2>
+            <table class="w-full text-left">
+                <thead>
+                    <tr>
+                        <th class="pb-2">Игрок</th>
+                        <th class="pb-2">Баланс</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-body">
+                    <!-- Leaderboard data will be inserted here -->
+                </tbody>
+            </table>
         </div>
         <div id="referrals" class="hidden py-4">
             <h2 class="text-2xl font-bold">Рефералы</h2>
@@ -46,11 +56,16 @@
                         content.classList.add('hidden');
                     }
                 });
+
+                if (tab.dataset.tab === 'leaderboard') {
+                    fetchLeaderboard();
+                }
             });
         });
 
         const wheelContainer = document.getElementById('wheel-container');
         const spinButton = document.getElementById('spin-button');
+        const leaderboardBody = document.getElementById('leaderboard-body');
 
         let prizes = [];
 
@@ -107,6 +122,20 @@
                 wheelContainer.style.transform = `rotate(${winningAngle}deg)`;
             }, 3000);
         });
+
+        async function fetchLeaderboard() {
+            const response = await fetch('/api/users/top');
+            const users = await response.json();
+            leaderboardBody.innerHTML = '';
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="py-2">${user.username || 'Anonymous'}</td>
+                    <td>${user.balance}</td>
+                `;
+                leaderboardBody.appendChild(row);
+            });
+        }
 
         fetchPrizes();
     </script>
