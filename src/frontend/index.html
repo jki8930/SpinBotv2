@@ -15,8 +15,8 @@
         </div>
         <div id="wheel" class="py-4">
             <div class="flex flex-col items-center">
-                <div class="w-64 h-64 bg-pink-300 rounded-full flex items-center justify-center mb-4">
-                    <span class="text-white text-2xl">Колесо</span>
+                <div id="wheel-container" class="w-64 h-64 rounded-full flex items-center justify-center mb-4 relative">
+                    <!-- Sectors will be generated here -->
                 </div>
                 <button id="spin-button" class="px-6 py-2 bg-pink-500 text-white font-bold rounded-full">Вращать</button>
             </div>
@@ -49,16 +49,66 @@
             });
         });
 
+        const wheelContainer = document.getElementById('wheel-container');
         const spinButton = document.getElementById('spin-button');
-        const wheelElement = document.querySelector('.w-64.h-64');
+
+        let prizes = [];
+
+        async function fetchPrizes() {
+            const response = await fetch('/api/wheel/prizes');
+            prizes = await response.json();
+            createWheel();
+        }
+
+        function createWheel() {
+            const totalChance = prizes.reduce((acc, prize) => acc + prize.chance, 0);
+            let currentAngle = 0;
+            const gradientColors = [];
+
+            prizes.forEach((prize, index) => {
+                const prizeAngle = (prize.chance / totalChance) * 360;
+                const color = index % 2 === 0 ? '#fce7f3' : '#fbcfe8';
+                gradientColors.push(`${color} ${currentAngle}deg ${currentAngle + prizeAngle}deg`);
+
+                const prizeElement = document.createElement('div');
+                prizeElement.className = 'absolute w-full h-full';
+                prizeElement.style.transform = `rotate(${currentAngle + prizeAngle / 2}deg)`;
+                prizeElement.innerHTML = `<span class="absolute top-0 left-1/2 -translate-x-1/2 text-xs">${prize.name}</span>`;
+                wheelContainer.appendChild(prizeElement);
+
+                currentAngle += prizeAngle;
+            });
+
+            wheelContainer.style.background = `conic-gradient(${gradientColors.join(', ')})`;
+        }
 
         spinButton.addEventListener('click', () => {
-            wheelElement.classList.add('animate-spin');
+            const totalChance = prizes.reduce((acc, prize) => acc + prize.chance, 0);
+            let randomValue = Math.random() * totalChance;
+            let winningPrize = null;
+
+            for (const prize of prizes) {
+                randomValue -= prize.chance;
+                if (randomValue <= 0) {
+                    winningPrize = prize;
+                    break;
+                }
+            }
+
+            const prizeAngle = (winningPrize.chance / totalChance) * 360;
+            const winningAngle = 360 - (prizes.indexOf(winningPrize) * prizeAngle + prizeAngle / 2);
+
+            wheelContainer.style.transition = 'transform 3s ease-out';
+            wheelContainer.style.transform = `rotate(${360 * 5 + winningAngle}deg)`;
+
             setTimeout(() => {
-                wheelElement.classList.remove('animate-spin');
-                alert('Вы выиграли 100 очков!');
+                alert(`Вы выиграли: ${winningPrize.name}`);
+                wheelContainer.style.transition = 'none';
+                wheelContainer.style.transform = `rotate(${winningAngle}deg)`;
             }, 3000);
         });
+
+        fetchPrizes();
     </script>
 </body>
 </html>
