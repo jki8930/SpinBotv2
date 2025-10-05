@@ -4,8 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TRGSpin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h1>Welcome to TRGSpin!</h1>
+<body class="bg-pink-100">
+    <div id="app" class="p-4">
+        <div class="flex border-b">
+            <button class="px-4 py-2 -mb-px font-semibold text-gray-800 border-b-2 border-pink-500" data-tab="wheel">🎰 Колесо фортуны</button>
+            <button class="px-4 py-2 font-semibold text-gray-500" data-tab="leaderboard">🏆 Топ игроков</button>
+            <button class="px-4 py-2 font-semibold text-gray-500" data-tab="referrals">👥 Рефералы</button>
+        </div>
+        <div id="wheel" class="py-4">
+            <h2 class="text-2xl font-bold">Колесо фортуны</h2>
+            <!-- Wheel component will go here -->
+        </div>
+        <div id="leaderboard" class="hidden py-4">
+            <h2 class="text-2xl font-bold">Топ игроков</h2>
+            <!-- Leaderboard component will go here -->
+        </div>
+        <div id="referrals" class="hidden py-4">
+            <h2 class="text-2xl font-bold">Рефералы</h2>
+            <!-- Referrals component will go here -->
+        </div>
+    </div>
+    <script>
+        const tabs = document.querySelectorAll('[data-tab]');
+        const tabContents = document.querySelectorAll('[id^="wheel"], [id^="leaderboard"], [id^="referrals"]');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('border-pink-500', 'text-gray-800'));
+                tab.classList.add('border-pink-500', 'text-gray-800');
+
+                tabContents.forEach(content => {
+                    if (content.id === tab.dataset.tab) {
+                        content.classList.remove('hidden');
+                    } else {
+                        content.classList.add('hidden');
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>
