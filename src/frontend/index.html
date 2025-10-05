@@ -14,8 +14,12 @@
             <button class="px-4 py-2 font-semibold text-gray-500" data-tab="referrals">👥 Рефералы</button>
         </div>
         <div id="wheel" class="py-4">
-            <h2 class="text-2xl font-bold">Колесо фортуны</h2>
-            <!-- Wheel component will go here -->
+            <div class="flex flex-col items-center">
+                <div class="w-64 h-64 bg-pink-300 rounded-full flex items-center justify-center mb-4">
+                    <span class="text-white text-2xl">Колесо</span>
+                </div>
+                <button id="spin-button" class="px-6 py-2 bg-pink-500 text-white font-bold rounded-full">Вращать</button>
+            </div>
         </div>
         <div id="leaderboard" class="hidden py-4">
             <h2 class="text-2xl font-bold">Топ игроков</h2>
@@ -43,6 +47,17 @@
                     }
                 });
             });
+        });
+
+        const spinButton = document.getElementById('spin-button');
+        const wheelElement = document.querySelector('.w-64.h-64');
+
+        spinButton.addEventListener('click', () => {
+            wheelElement.classList.add('animate-spin');
+            setTimeout(() => {
+                wheelElement.classList.remove('animate-spin');
+                alert('Вы выиграли 100 очков!');
+            }, 3000);
         });
     </script>
 </body>
