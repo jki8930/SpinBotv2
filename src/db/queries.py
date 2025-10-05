@@ -2,7 +2,7 @@ import secrets
 import string
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.db.models import User
+from src.db.models import User, Prize
 
 REFERRAL_BONUS = 100
 
@@ -52,3 +52,8 @@ async def count_referrals(session: AsyncSession, user_id: int) -> int:
     stmt = select(func.count(User.id)).where(User.referred_by == user_id)
     result = await session.execute(stmt)
     return result.scalar() or 0
+
+async def get_prizes(session: AsyncSession) -> list[Prize]:
+    stmt = select(Prize)
+    result = await session.execute(stmt)
+    return result.scalars().all()

@@ -11,3 +11,14 @@ class User(UserBase):
 
     class Config:
         from_attributes = True
+
+class PrizeBase(BaseModel):
+    name: str
+    chance: float
+    amount: int
+
+class Prize(PrizeBase):
+    id: int
+
+    class Config:
+        from_attributes = True
