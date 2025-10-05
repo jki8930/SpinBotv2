@@ -4,6 +4,7 @@ class UserBase(BaseModel):
     telegram_id: int
     username: str | None = None
     balance: int
+    tickets: int
 
 class User(UserBase):
     id: int
@@ -16,6 +17,7 @@ class PrizeBase(BaseModel):
     name: str
     chance: float
     amount: int
+
 
 class Prize(PrizeBase):
     id: int

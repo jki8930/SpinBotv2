@@ -3,6 +3,7 @@ import logging
 import os
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import CommandStart
+from aiogram.types import ErrorEvent
 from src.bot.keyboards import get_main_menu_keyboard
 from src.db.session import async_session
 from src.db.queries import get_user_by_telegram_id, create_user, get_user_by_referral_code, count_referrals
@@ -60,8 +61,8 @@ def create_dispatcher():
         await callback_query.answer("Вы выбрали таблицу лидеров.", show_alert=True)
 
     @dp.errors()
-    async def error_handler(update: types.Update, exception: Exception):
-        logging.error(f"Ошибка при обработке апдейта {update}: {exception}")
+    async def error_handler(event: ErrorEvent):
+        logging.error(f"Ошибка при обработке апдейта {event.update}: {event.exception}")
         return True
 
     return dp

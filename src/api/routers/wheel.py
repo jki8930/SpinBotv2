@@ -1,5 +1,6 @@
 from typing import Annotated, List
 import datetime
+import os
 from fastapi import Depends, APIRouter, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.api import schemas
@@ -12,11 +13,21 @@ router = APIRouter()
 DBSession = Annotated[AsyncSession, Depends(get_db)]
 
 SPIN_COOLDOWN = datetime.timedelta(seconds=10)
+DAILY_PRIZE_POOL = int(os.getenv("DAILY_PRIZE_POOL", 10000))
 
 @router.get("/wheel/prizes", response_model=List[schemas.Prize])
 async def get_prizes(db: DBSession):
     prizes = await queries.get_prizes(db)
-    return prizes
+    daily_prize = await queries.get_or_create_daily_prize(db)
+    remaining_pool = DAILY_PRIZE_POOL - daily_prize.total_won
+
+    adjusted_prizes = []
+    for prize in prizes:
+        if prize.amount > 0 and prize.amount > remaining_pool:
+            adjusted_prizes.append(schemas.Prize(id=prize.id, name=prize.name, chance=0, amount=prize.amount))
+        else:
+            adjusted_prizes.append(schemas.Prize(id=prize.id, name=prize.name, chance=prize.chance, amount=prize.amount))
+    return adjusted_prizes
 
 @router.post("/wheel/spin/{telegram_id}")
 async def spin_wheel(telegram_id: int, db: DBSession):
@@ -27,28 +38,48 @@ async def spin_wheel(telegram_id: int, db: DBSession):
     if user.last_spin and datetime.datetime.utcnow() - user.last_spin < SPIN_COOLDOWN:
         raise HTTPException(status_code=400, detail="Please wait before spinning again")
 
-    prizes = await queries.get_prizes(db)
-    spin_cost = prizes[0].spin_cost if prizes else 100
+    if user.tickets <= 0:
+        raise HTTPException(status_code=400, detail="Not enough tickets")
 
-    if user.balance < spin_cost:
-        raise HTTPException(status_code=400, detail="Insufficient balance")
-
-    user.balance -= spin_cost
+    user.tickets -= 1
     user.last_spin = datetime.datetime.utcnow()
 
-    total_chance = sum(p.chance for p in prizes)
+    adjusted_prizes = await get_prizes(db)
+
+    total_chance = sum(p.chance for p in adjusted_prizes)
     random_value = __import__("random").uniform(0, total_chance)
     winning_prize = None
 
-    for prize in prizes:
+    for prize in adjusted_prizes:
         random_value -= prize.chance
         if random_value <= 0:
             winning_prize = prize
             break
 
+    if winning_prize is None:
+        winning_prize = adjusted_prizes[-1]
+
     user.balance += winning_prize.amount
+    daily_prize = await queries.get_or_create_daily_prize(db)
+    daily_prize.total_won += winning_prize.amount
     await db.commit()
 
-    await manager.broadcast(f"{{\"telegram_id\": {user.telegram_id}, \"balance\": {user.balance}}}")
+    await manager.broadcast(f'{{"telegram_id": {user.telegram_id}, "balance": {user.balance}, "tickets": {user.tickets}}}')
 
     return winning_prize
+
+@router.get("/wheel/ticket-status/{telegram_id}")
+async def get_ticket_status(telegram_id: int, db: DBSession):
+    user = await queries.get_user_by_telegram_id(db, telegram_id=telegram_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    now = datetime.datetime.utcnow().date()
+    if user.last_free_ticket_date < now:
+        user.tickets += 1
+        user.last_free_ticket_date = now
+        await db.commit()
+
+    next_free_ticket_in = (user.last_free_ticket_date + datetime.timedelta(days=1) - now).total_seconds()
+
+    return {"tickets": user.tickets, "next_free_ticket_in": next_free_ticket_in}

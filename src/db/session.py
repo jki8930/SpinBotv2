@@ -14,9 +14,10 @@ DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{D
 engine = create_async_engine(DATABASE_URL, echo=True)
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 
-async def init_db():
-    async with engine.begin() as conn:
+async def init_db(db_url: str = DATABASE_URL):
+    db_engine = create_async_engine(db_url, echo=True)
+    async with db_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
-    async with async_session() as session:
+    async with async_sessionmaker(db_engine, expire_on_commit=False)() as session:
         await seed_prizes(session)

@@ -2,10 +2,24 @@ import secrets
 import string
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.db.models import User, Prize
+from src.db.models import User, Prize, DailyPrize
 from src.api.ws import manager
+import datetime
 
-REFERRAL_BONUS = 100
+
+
+async def get_or_create_daily_prize(session: AsyncSession) -> DailyPrize:
+    today = datetime.date.today()
+    stmt = select(DailyPrize).where(DailyPrize.date == today)
+    result = await session.execute(stmt)
+    daily_prize = result.scalar_one_or_none()
+
+    if not daily_prize:
+        daily_prize = DailyPrize(date=today)
+        session.add(daily_prize)
+        await session.commit()
+
+    return daily_prize
 
 async def get_user_by_id(session: AsyncSession, user_id: int) -> User | None:
     stmt = select(User).where(User.id == user_id)
@@ -35,7 +49,8 @@ async def create_user(session: AsyncSession, telegram_id: int, username: str | N
         telegram_id=telegram_id, 
         username=username, 
         referral_code=referral_code,
-        referred_by=referred_by
+        referred_by=referred_by,
+        last_free_ticket_date=datetime.date.today()
     )
     session.add(new_user)
     await session.flush() # Use flush to get the new_user.id before committing
@@ -43,7 +58,7 @@ async def create_user(session: AsyncSession, telegram_id: int, username: str | N
     if referred_by:
         referrer = await get_user_by_id(session, referred_by)
         if referrer:
-            referrer.balance += REFERRAL_BONUS
+            referrer.tickets += 1
             session.add(referrer)
             await manager.broadcast(f"{{\"type\": \"referral\", \"referrer_id\": {referrer.telegram_id}}}")
 
