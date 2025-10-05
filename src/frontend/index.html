@@ -8,6 +8,17 @@
 </head>
 <body class="bg-pink-100">
     <div id="app" class="p-4">
+        <div class="flex justify-between items-center mb-4">
+            <div>
+                <span class="font-bold">Баланс:</span> <span id="balance">0</span>
+            </div>
+            <div>
+                <span class="font-bold">Тикеты:</span> <span id="tickets">0</span>
+            </div>
+        </div>
+        <div id="next-ticket-timer" class="hidden text-center text-gray-500 mb-4">
+            Следующий бесплатный тикет через: <span id="timer"></span>
+        </div>
         <div class="flex border-b">
             <button class="px-4 py-2 -mb-px font-semibold text-gray-800 border-b-2 border-pink-500" data-tab="wheel">🎰 Колесо фортуны</button>
             <button class="px-4 py-2 font-semibold text-gray-500" data-tab="leaderboard">🏆 Топ игроков</button>
@@ -52,6 +63,28 @@
     <script>
         const tabs = document.querySelectorAll('[data-tab]');
         const tabContents = document.querySelectorAll('[id^="wheel"], [id^="leaderboard"], [id^="referrals"]');
+        const balanceElement = document.getElementById('balance');
+        const ticketsElement = document.getElementById('tickets');
+        const nextTicketTimerElement = document.getElementById('next-ticket-timer');
+        const timerElement = document.getElementById('timer');
+        const wheelContainer = document.getElementById('wheel-container');
+        const spinButton = document.getElementById('spin-button');
+        const leaderboardBody = document.getElementById('leaderboard-body');
+        const referralsBody = document.getElementById('referrals-body');
+
+        let prizes = [];
+        let user = { telegram_id: 123 }; // Placeholder for user data
+
+        const ws = new WebSocket(`ws://${window.location.host}/ws`);
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            if (data.telegram_id === user.telegram_id) {
+                updateUserData();
+            }
+            if (document.getElementById('leaderboard').classList.contains('hidden') === false) {
+                fetchLeaderboard();
+            }
+        };
 
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
@@ -74,27 +107,38 @@
             });
         });
 
-        const wheelContainer = document.getElementById('wheel-container');
-        const spinButton = document.getElementById('spin-button');
-        const leaderboardBody = document.getElementById('leaderboard-body');
-        const referralsBody = document.getElementById('referrals-body');
+        async function updateUserData() {
+            const response = await fetch(`/api/users/${user.telegram_id}`);
+            const userData = await response.json();
+            balanceElement.textContent = userData.balance;
+            ticketsElement.textContent = userData.tickets;
 
-        let prizes = [];
-        let user = { telegram_id: 123 }; // Placeholder for user data
+            if (userData.tickets === 0) {
+                nextTicketTimerElement.classList.remove('hidden');
+                startTimer();
+            } else {
+                nextTicketTimerElement.classList.add('hidden');
+            }
+        }
 
-        const ws = new WebSocket(`ws://${window.location.host}/ws`);
-        ws.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-            if (data.type === 'referral' && data.referrer_id === user.telegram_id) {
-                fetchReferrals();
-            } else if (data.telegram_id === user.telegram_id) {
-                // Update user's balance
-            }
-            // Update leaderboard if the leaderboard tab is active
-            if (document.getElementById('leaderboard').classList.contains('hidden') === false) {
-                fetchLeaderboard();
-            }
-        };
+        async function startTimer() {
+            const response = await fetch(`/api/wheel/ticket-status/${user.telegram_id}`);
+            const data = await response.json();
+            let seconds = data.next_free_ticket_in;
+
+            const interval = setInterval(() => {
+                seconds--;
+                const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+                const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+                const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+                timerElement.textContent = `${h}:${m}:${s}`;
+
+                if (seconds <= 0) {
+                    clearInterval(interval);
+                    updateUserData();
+                }
+            }, 1000);
+        }
 
         async function fetchPrizes() {
             const response = await fetch('/api/wheel/prizes');
@@ -103,6 +147,7 @@
         }
 
         function createWheel() {
+            wheelContainer.innerHTML = '';
             const totalChance = prizes.reduce((acc, prize) => acc + prize.chance, 0);
             let currentAngle = 0;
             const gradientColors = [];
@@ -125,7 +170,17 @@
         }
 
         spinButton.addEventListener('click', async () => {
+            if (parseInt(ticketsElement.textContent) <= 0) {
+                alert("Недостаточно тикетов!");
+                return;
+            }
+
             const response = await fetch(`/api/wheel/spin/${user.telegram_id}`, { method: 'POST' });
+            if (response.status !== 200) {
+                const error = await response.json();
+                alert(error.detail);
+                return;
+            }
             const winningPrize = await response.json();
 
             const totalChance = prizes.reduce((acc, prize) => acc + prize.chance, 0);
@@ -139,6 +194,7 @@
                 alert(`Вы выиграли: ${winningPrize.name}`);
                 wheelContainer.style.transition = 'none';
                 wheelContainer.style.transform = `rotate(${winningAngle}deg)`;
+                updateUserData();
             }, 3000);
         });
 
@@ -169,6 +225,7 @@
             });
         }
 
+        updateUserData();
         fetchPrizes();
     </script>
 </body>
