@@ -1,0 +1,10 @@
+[project]
+name = "tgspin"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "aiogram>=3.22.0",
+    "python-dotenv>=0.21.0",
+]
