@@ -4,7 +4,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 def get_main_menu_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
-        InlineKeyboardButton(text="🎰 Колесо фортуны", web_app={"url": "https://google.com"}) # Placeholder URL
+        InlineKeyboardButton(text="🎰 Колесо фортуны", web_app={"url": "http://localhost:8000/static/index.html"}) # Placeholder URL
     )
     builder.row(
         InlineKeyboardButton(text="👥 Реферальная система", callback_data="referral_system")
