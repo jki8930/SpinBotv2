@@ -6,6 +6,7 @@ from aiogram.filters import CommandStart
 from src.bot.keyboards import get_main_menu_keyboard
 from src.db.session import async_session
 from src.db.queries import get_user_by_telegram_id, create_user, get_user_by_referral_code, count_referrals
+from src.bot.middlewares.antiflood import AntiFloodMiddleware
 
 def create_bot():
     bot = Bot(token=os.getenv("BOT_TOKEN"))
@@ -13,6 +14,7 @@ def create_bot():
 
 def create_dispatcher():
     dp = Dispatcher()
+    dp.message.middleware(AntiFloodMiddleware())
 
     @dp.message(CommandStart())
     async def start_command(message: types.Message):
