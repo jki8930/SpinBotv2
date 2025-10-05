@@ -36,8 +36,17 @@
             </table>
         </div>
         <div id="referrals" class="hidden py-4">
-            <h2 class="text-2xl font-bold">Рефералы</h2>
-            <!-- Referrals component will go here -->
+            <h2 class="text-2xl font-bold mb-4">Ваши рефералы</h2>
+            <table class="w-full text-left">
+                <thead>
+                    <tr>
+                        <th class="pb-2">Игрок</th>
+                    </tr>
+                </thead>
+                <tbody id="referrals-body">
+                    <!-- Referrals data will be inserted here -->
+                </tbody>
+            </table>
         </div>
     </div>
     <script>
@@ -59,6 +68,8 @@
 
                 if (tab.dataset.tab === 'leaderboard') {
                     fetchLeaderboard();
+                } else if (tab.dataset.tab === 'referrals') {
+                    fetchReferrals();
                 }
             });
         });
@@ -66,8 +77,10 @@
         const wheelContainer = document.getElementById('wheel-container');
         const spinButton = document.getElementById('spin-button');
         const leaderboardBody = document.getElementById('leaderboard-body');
+        const referralsBody = document.getElementById('referrals-body');
 
         let prizes = [];
+        let user = { telegram_id: 123 }; // Placeholder for user data
 
         async function fetchPrizes() {
             const response = await fetch('/api/wheel/prizes');
@@ -134,6 +147,19 @@
                     <td>${user.balance}</td>
                 `;
                 leaderboardBody.appendChild(row);
+            });
+        }
+
+        async function fetchReferrals() {
+            const response = await fetch(`/api/users/${user.telegram_id}/referrals`);
+            const referrals = await response.json();
+            referralsBody.innerHTML = '';
+            referrals.forEach(referral => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="py-2">${referral.username || 'Anonymous'}</td>
+                `;
+                referralsBody.appendChild(row);
             });
         }
 
