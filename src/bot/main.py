@@ -5,7 +5,7 @@ from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import CommandStart
 from src.bot.keyboards import get_main_menu_keyboard
 from src.db.session import async_session
-from src.db.queries import get_user_by_telegram_id, create_user, get_user_by_referral_code
+from src.db.queries import get_user_by_telegram_id, create_user, get_user_by_referral_code, count_referrals
 
 def create_bot():
     bot = Bot(token=os.getenv("BOT_TOKEN"))
@@ -39,10 +39,18 @@ def create_dispatcher():
         async with async_session() as session:
             user = await get_user_by_telegram_id(session, callback_query.from_user.id)
             if user:
+                num_referrals = await count_referrals(session, user.id)
                 bot_info = await callback_query.bot.get_me()
                 bot_username = bot_info.username
                 referral_link = f"https://t.me/{bot_username}?start={user.referral_code}"
-                await callback_query.message.answer(f"Ваша реферальная ссылка: {referral_link}")
+                text = (
+                    f"👥 Реферальная система 👥\n\n"
+                    f"Приглашайте друзей и получайте бонусы!\n\n"
+                    f"🔗 Ваша реферальная ссылка: {referral_link}\n"
+                    f"\n"
+                    f"Вы пригласили: {num_referrals} человек"
+                )
+                await callback_query.message.answer(text)
             await callback_query.answer()
 
     @dp.callback_query(F.data == "leaderboard")

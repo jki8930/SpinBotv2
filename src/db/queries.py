@@ -1,8 +1,15 @@
 import secrets
 import string
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.db.models import User
+
+REFERRAL_BONUS = 100
+
+async def get_user_by_id(session: AsyncSession, user_id: int) -> User | None:
+    stmt = select(User).where(User.id == user_id)
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
 
 async def get_user_by_telegram_id(session: AsyncSession, telegram_id: int) -> User | None:
     stmt = select(User).where(User.telegram_id == telegram_id)
@@ -30,5 +37,18 @@ async def create_user(session: AsyncSession, telegram_id: int, username: str | N
         referred_by=referred_by
     )
     session.add(new_user)
+    await session.flush() # Use flush to get the new_user.id before committing
+
+    if referred_by:
+        referrer = await get_user_by_id(session, referred_by)
+        if referrer:
+            referrer.balance += REFERRAL_BONUS
+            session.add(referrer)
+
     await session.commit()
     return new_user
+
+async def count_referrals(session: AsyncSession, user_id: int) -> int:
+    stmt = select(func.count(User.id)).where(User.referred_by == user_id)
+    result = await session.execute(stmt)
+    return result.scalar() or 0
