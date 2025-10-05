@@ -21,3 +21,4 @@ class Prize(Base):
     name: Mapped[str] = mapped_column(String)
     chance: Mapped[float] = mapped_column(Float)
     amount: Mapped[int] = mapped_column()
+    spin_cost: Mapped[int] = mapped_column(default=100)

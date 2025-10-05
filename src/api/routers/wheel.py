@@ -22,6 +22,13 @@ async def spin_wheel(telegram_id: int, db: DBSession):
         raise HTTPException(status_code=404, detail="User not found")
 
     prizes = await queries.get_prizes(db)
+    spin_cost = prizes[0].spin_cost if prizes else 100
+
+    if user.balance < spin_cost:
+        raise HTTPException(status_code=400, detail="Insufficient balance")
+
+    user.balance -= spin_cost
+
     total_chance = sum(p.chance for p in prizes)
     random_value = __import__("random").uniform(0, total_chance)
     winning_prize = None
