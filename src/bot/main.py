@@ -5,7 +5,7 @@ from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import CommandStart
 from src.bot.keyboards import get_main_menu_keyboard
 from src.db.session import async_session
-from src.db.queries import get_user_by_telegram_id, create_user
+from src.db.queries import get_user_by_telegram_id, create_user, get_user_by_referral_code
 
 def create_bot():
     bot = Bot(token=os.getenv("BOT_TOKEN"))
@@ -16,17 +16,34 @@ def create_dispatcher():
 
     @dp.message(CommandStart())
     async def start_command(message: types.Message):
+        args = message.text.split()
+        referred_by_id = None
+
+        if len(args) > 1:
+            referral_code = args[1]
+            async with async_session() as session:
+                referrer = await get_user_by_referral_code(session, referral_code)
+                if referrer:
+                    referred_by_id = referrer.id
+
         async with async_session() as session:
             user = await get_user_by_telegram_id(session, message.from_user.id)
             if not user:
-                await create_user(session, message.from_user.id, message.from_user.username)
+                await create_user(session, message.from_user.id, message.from_user.username, referred_by=referred_by_id)
                 await message.answer("Привет! Добро пожаловать в TRGSpin!", reply_markup=get_main_menu_keyboard())
             else:
                 await message.answer("С возвращением!", reply_markup=get_main_menu_keyboard())
 
     @dp.callback_query(F.data == "referral_system")
     async def referral_system_callback(callback_query: types.CallbackQuery):
-        await callback_query.answer("Вы выбрали реферальную систему.", show_alert=True)
+        async with async_session() as session:
+            user = await get_user_by_telegram_id(session, callback_query.from_user.id)
+            if user:
+                bot_info = await callback_query.bot.get_me()
+                bot_username = bot_info.username
+                referral_link = f"https://t.me/{bot_username}?start={user.referral_code}"
+                await callback_query.message.answer(f"Ваша реферальная ссылка: {referral_link}")
+            await callback_query.answer()
 
     @dp.callback_query(F.data == "leaderboard")
     async def leaderboard_callback(callback_query: types.CallbackQuery):
