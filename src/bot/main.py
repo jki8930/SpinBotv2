@@ -4,6 +4,8 @@ import os
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import CommandStart
 from src.bot.keyboards import get_main_menu_keyboard
+from src.db.session import async_session
+from src.db.queries import get_user_by_telegram_id, create_user
 
 def create_bot():
     bot = Bot(token=os.getenv("BOT_TOKEN"))
@@ -14,7 +16,13 @@ def create_dispatcher():
 
     @dp.message(CommandStart())
     async def start_command(message: types.Message):
-        await message.answer("Привет! Добро пожаловать в TRGSpin!", reply_markup=get_main_menu_keyboard())
+        async with async_session() as session:
+            user = await get_user_by_telegram_id(session, message.from_user.id)
+            if not user:
+                await create_user(session, message.from_user.id, message.from_user.username)
+                await message.answer("Привет! Добро пожаловать в TRGSpin!", reply_markup=get_main_menu_keyboard())
+            else:
+                await message.answer("С возвращением!", reply_markup=get_main_menu_keyboard())
 
     @dp.callback_query(F.data == "referral_system")
     async def referral_system_callback(callback_query: types.CallbackQuery):
