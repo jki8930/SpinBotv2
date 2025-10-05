@@ -85,7 +85,9 @@
         const ws = new WebSocket(`ws://${window.location.host}/ws`);
         ws.onmessage = function(event) {
             const data = JSON.parse(event.data);
-            if (data.telegram_id === user.telegram_id) {
+            if (data.type === 'referral' && data.referrer_id === user.telegram_id) {
+                fetchReferrals();
+            } else if (data.telegram_id === user.telegram_id) {
                 // Update user's balance
             }
             // Update leaderboard if the leaderboard tab is active

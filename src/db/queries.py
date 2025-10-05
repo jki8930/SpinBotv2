@@ -3,6 +3,7 @@ import string
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.db.models import User, Prize
+from src.api.ws import manager
 
 REFERRAL_BONUS = 100
 
@@ -44,6 +45,7 @@ async def create_user(session: AsyncSession, telegram_id: int, username: str | N
         if referrer:
             referrer.balance += REFERRAL_BONUS
             session.add(referrer)
+            await manager.broadcast(f"{{\"type\": \"referral\", \"referrer_id\": {referrer.telegram_id}}}")
 
     await session.commit()
     return new_user
