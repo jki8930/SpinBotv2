@@ -82,6 +82,18 @@
         let prizes = [];
         let user = { telegram_id: 123 }; // Placeholder for user data
 
+        const ws = new WebSocket(`ws://${window.location.host}/ws`);
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            if (data.telegram_id === user.telegram_id) {
+                // Update user's balance
+            }
+            // Update leaderboard if the leaderboard tab is active
+            if (document.getElementById('leaderboard').classList.contains('hidden') === false) {
+                fetchLeaderboard();
+            }
+        };
+
         async function fetchPrizes() {
             const response = await fetch('/api/wheel/prizes');
             prizes = await response.json();
@@ -110,21 +122,13 @@
             wheelContainer.style.background = `conic-gradient(${gradientColors.join(', ')})`;
         }
 
-        spinButton.addEventListener('click', () => {
+        spinButton.addEventListener('click', async () => {
+            const response = await fetch(`/api/wheel/spin/${user.telegram_id}`, { method: 'POST' });
+            const winningPrize = await response.json();
+
             const totalChance = prizes.reduce((acc, prize) => acc + prize.chance, 0);
-            let randomValue = Math.random() * totalChance;
-            let winningPrize = null;
-
-            for (const prize of prizes) {
-                randomValue -= prize.chance;
-                if (randomValue <= 0) {
-                    winningPrize = prize;
-                    break;
-                }
-            }
-
             const prizeAngle = (winningPrize.chance / totalChance) * 360;
-            const winningAngle = 360 - (prizes.indexOf(winningPrize) * prizeAngle + prizeAngle / 2);
+            const winningAngle = 360 - (prizes.findIndex(p => p.id === winningPrize.id) * prizeAngle + prizeAngle / 2);
 
             wheelContainer.style.transition = 'transform 3s ease-out';
             wheelContainer.style.transform = `rotate(${360 * 5 + winningAngle}deg)`;
