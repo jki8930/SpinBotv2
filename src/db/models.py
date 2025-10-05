@@ -1,5 +1,6 @@
-from sqlalchemy import BigInteger, String, ForeignKey, Float
+from sqlalchemy import BigInteger, String, ForeignKey, Float, DateTime
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+import datetime
 
 class Base(DeclarativeBase):
     pass
@@ -13,6 +14,7 @@ class User(Base):
     balance: Mapped[int] = mapped_column(default=0)
     referral_code: Mapped[str] = mapped_column(String, unique=True, index=True)
     referred_by: Mapped[int] = mapped_column(ForeignKey('users.id'), nullable=True)
+    last_spin: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=True)
 
 class Prize(Base):
     __tablename__ = 'prizes'

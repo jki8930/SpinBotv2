@@ -1,4 +1,5 @@
 from typing import Annotated, List
+import datetime
 from fastapi import Depends, APIRouter, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.api import schemas
@@ -9,6 +10,8 @@ from src.api.ws import manager
 router = APIRouter()
 
 DBSession = Annotated[AsyncSession, Depends(get_db)]
+
+SPIN_COOLDOWN = datetime.timedelta(seconds=10)
 
 @router.get("/wheel/prizes", response_model=List[schemas.Prize])
 async def get_prizes(db: DBSession):
@@ -21,6 +24,9 @@ async def spin_wheel(telegram_id: int, db: DBSession):
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
 
+    if user.last_spin and datetime.datetime.utcnow() - user.last_spin < SPIN_COOLDOWN:
+        raise HTTPException(status_code=400, detail="Please wait before spinning again")
+
     prizes = await queries.get_prizes(db)
     spin_cost = prizes[0].spin_cost if prizes else 100
 
@@ -28,6 +34,7 @@ async def spin_wheel(telegram_id: int, db: DBSession):
         raise HTTPException(status_code=400, detail="Insufficient balance")
 
     user.balance -= spin_cost
+    user.last_spin = datetime.datetime.utcnow()
 
     total_chance = sum(p.chance for p in prizes)
     random_value = __import__("random").uniform(0, total_chance)
